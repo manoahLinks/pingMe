@@ -184,14 +184,14 @@ function setupEventListener(subscription) {
             // Analyze event with AI
             const analysis = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
-                contents: `Analyze this event: ${JSON.stringify(eventData)}`
+                contents: `Analyze this blockchain event and provide insights: ${JSON.stringify(eventData)}, in less than 100 words summarize`
             });
             console.log('AI analysis:', analysis.text);
             
-            // Send email notification
-            const emailResult = await emailService.sendEventNotification(email, eventData);
+            // Send email notification with AI analysis
+            const emailResult = await emailService.sendEventNotification(email, eventData, analysis.text);
             if (emailResult.success) {
-                console.log(`✅ Email sent to ${email}`);
+                console.log(`✅ Email sent to ${email} with AI analysis`);
             } else {
                 console.error(`❌ Failed to send email to ${email}:`, emailResult.error);
             }
@@ -487,7 +487,7 @@ app.post('/test-email', async (req, res) => {
             }
         };
         
-        const result = await emailService.sendEventNotification(email, testEventData);
+        const result = await emailService.sendEventNotification(email, testEventData, "This is a test AI analysis of the blockchain event. The AI would normally analyze the event data and provide insights about what happened on the blockchain.");
         
         res.json({
             success: result.success,

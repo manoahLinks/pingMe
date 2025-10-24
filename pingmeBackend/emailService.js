@@ -24,12 +24,12 @@ class EmailService {
         }
     }
 
-    async sendEventNotification(userEmail, eventData) {
+    async sendEventNotification(userEmail, eventData, aiAnalysis = null) {
         try {
             const { subscription, event } = eventData;
             
-            const subject = `🔔 Blockchain Event Alert - ${event.eventName}`;
-            const htmlContent = this.generateEmailHTML(subscription, event);
+            const subject = `🔔 Blockchain Event Alert - ${subscription.eventName}`;
+            const htmlContent = this.generateEmailHTML(subscription, event, aiAnalysis);
 
             const info = await this.transporter.sendMail({
                 from: process.env.EMAIL_USER,
@@ -59,7 +59,7 @@ class EmailService {
         }, space);
     }
 
-    generateEmailHTML(subscription, event) {
+    generateEmailHTML(subscription, event, aiAnalysis = null) {
         const timestamp = new Date(event.timestamp * 1000).toLocaleString();
         
         return `
@@ -72,6 +72,8 @@ class EmailService {
                 .header { background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
                 .event-details { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 10px 0; }
                 .event-data { background: #e8f4fd; padding: 10px; border-radius: 3px; margin: 10px 0; }
+                .ai-analysis { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #0066cc; }
+                .ai-title { color: #0066cc; font-weight: bold; margin-bottom: 10px; }
                 .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
                 .highlight { color: #0066cc; font-weight: bold; }
                 .tx-link { color: #0066cc; text-decoration: none; }
@@ -86,12 +88,19 @@ class EmailService {
                 
                 <div class="event-details">
                     <h3>Event Details</h3>
-                    <p><strong>Event:</strong> <span class="highlight">${event.eventName}</span></p>
+                    <p><strong>Event:</strong> <span class="highlight">${subscription.eventName}</span></p>
                     <p><strong>Contract:</strong> ${subscription.contractAddress}</p>
                     <p><strong>Block:</strong> ${event.blockNumber}</p>
                     <p><strong>Transaction:</strong> <a href="https://explorer.somnia.network/tx/${event.transactionHash}" class="tx-link">${event.transactionHash}</a></p>
                     <p><strong>Time:</strong> ${timestamp}</p>
                 </div>
+                
+                ${aiAnalysis ? `
+                <div class="ai-analysis">
+                    <div class="ai-title">🤖 AI Analysis</div>
+                    <p>${aiAnalysis}</p>
+                </div>
+                ` : ''}
                 
                 <div class="event-data">
                     <h4>Event Data</h4>
@@ -108,18 +117,23 @@ class EmailService {
         `;
     }
 
-    generateEmailText(subscription, event) {
+    generateEmailText(subscription, event, aiAnalysis = null) {
         const timestamp = new Date(event.timestamp * 1000).toLocaleString();
         
         return `
 BLOCKCHAIN EVENT ALERT
 
-Event: ${event.eventName}
+Event: ${subscription.eventName}
 Contract: ${subscription.contractAddress}
 Block: ${event.blockNumber}
 Transaction: ${event.transactionHash}
 Time: ${timestamp}
 
+${aiAnalysis ? `
+🤖 AI ANALYSIS:
+${aiAnalysis}
+
+` : ''}
 Event Data:
 ${this.safeStringify(event.parsedData, 2)}
 
