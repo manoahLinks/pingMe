@@ -18,7 +18,7 @@ const provider = new ethers.WebSocketProvider(wsUrl);
 const AI_KEY = process.env.GEN_AI_API_KEY;
 
 const ai = new GoogleGenAI({
-    apiKey: 'AIzaSyDyZI8uGFzuHn2M-a3hq5AxOzKkkRQaHZ0',
+    apiKey: process.env.GEN_AI_API_KEY,
   });
 
 // Monitor WebSocket connection status
