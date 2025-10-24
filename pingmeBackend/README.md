@@ -18,6 +18,11 @@ cp env.example .env
 ```
 PORT=3000
 SUBSCRIPTION_CONTRACT_ADDRESS=0x...
+
+# Email Configuration
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+EMAIL_FROM=your-email@gmail.com
 ```
 
 4. Add contract ABIs to the `contractABIs.json` file
@@ -37,6 +42,7 @@ node index.js
 - `GET /abis/:contractAddress` - Get events for a specific contract
 - `GET /abis/:contractAddress/:eventName` - Get specific event ABI
 - `POST /reload-abis` - Reload ABIs from JSON file
+- `POST /test-email` - Send test email notification
 
 ## How it works
 

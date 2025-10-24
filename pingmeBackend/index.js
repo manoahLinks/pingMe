@@ -4,6 +4,8 @@ const cors = require('cors');
 const ethers = require('ethers');
 const fs = require('fs');
 const path = require('path');
+const EmailService = require('./emailService');
+const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 app.use(cors());
@@ -12,6 +14,12 @@ app.use(express.urlencoded({ extended: true }));
 
 const wsUrl = 'wss://dream-rpc.somnia.network/ws';
 const provider = new ethers.WebSocketProvider(wsUrl);
+
+const AI_KEY = process.env.GEN_AI_API_KEY;
+
+const ai = new GoogleGenAI({
+    apiKey: 'AIzaSyDyZI8uGFzuHn2M-a3hq5AxOzKkkRQaHZ0',
+  });
 
 // Monitor WebSocket connection status
 provider.on('debug', (info) => {
@@ -64,6 +72,9 @@ try {
 
 // Active event listeners storage
 const activeListeners = new Map();
+
+// Initialize email service
+const emailService = new EmailService();
 
 // Get event ABI by contract address and event name
 function getEventABI(contractAddress, eventName) {
@@ -139,7 +150,22 @@ function setupEventListener(subscription) {
                 data: log.data
             });
             
-            console.log('Event detected:', {
+            // Helper function to convert BigInt to string for JSON serialization
+            const convertBigIntToString = (obj) => {
+                if (obj === null || obj === undefined) return obj;
+                if (typeof obj === 'bigint') return obj.toString();
+                if (Array.isArray(obj)) return obj.map(convertBigIntToString);
+                if (typeof obj === 'object') {
+                    const converted = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        converted[key] = convertBigIntToString(value);
+                    }
+                    return converted;
+                }
+                return obj;
+            };
+
+            const eventData = {
                 subscription: {
                     contractAddress,
                     eventName,
@@ -148,12 +174,30 @@ function setupEventListener(subscription) {
                 event: {
                     blockNumber: log.blockNumber,
                     transactionHash: log.transactionHash,
-                    parsedData: parsedLog.args
+                    parsedData: convertBigIntToString(parsedLog.args),
+                    timestamp: Math.floor(Date.now() / 1000)
                 }
+            };
+            
+            console.log('Event detected:', eventData);
+
+            // Analyze event with AI
+            const analysis = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: `Analyze this event: ${JSON.stringify(eventData)}`
             });
+            console.log('AI analysis:', analysis.text);
+            
+            // Send email notification
+            const emailResult = await emailService.sendEventNotification(email, eventData);
+            if (emailResult.success) {
+                console.log(`✅ Email sent to ${email}`);
+            } else {
+                console.error(`❌ Failed to send email to ${email}:`, emailResult.error);
+            }
             
         } catch (error) {
-            console.error('Error parsing event log:', error);
+            console.error('Error processing event:', error);
         }
     };
     
@@ -414,6 +458,51 @@ app.post('/test-listener', (req, res) => {
     }
 });
 
+app.post('/test-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email address is required'
+            });
+        }
+        
+        // Create test event data
+        const testEventData = {
+            subscription: {
+                contractAddress: '0xf11Aa91C0AfbDE19064396c06ae3EDd4150C2693',
+                eventName: 'NumberIncremented',
+                email: email
+            },
+            event: {
+                blockNumber: 12345,
+                transactionHash: '0x1234567890abcdef',
+                parsedData: {
+                    oldNumber: 5,
+                    newNumber: 6
+                },
+                timestamp: Math.floor(Date.now() / 1000)
+            }
+        };
+        
+        const result = await emailService.sendEventNotification(email, testEventData);
+        
+        res.json({
+            success: result.success,
+            message: result.success ? 'Test email sent successfully' : 'Failed to send test email',
+            error: result.error
+        });
+        
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Initialize the service
 async function initialize() {
     try {
@@ -428,6 +517,15 @@ async function initialize() {
         } catch (error) {
             console.error('❌ WebSocket connection failed:', error);
             throw error;
+        }
+        
+        // Test email service
+        console.log('Testing email service...');
+        const emailTest = await emailService.testConnection();
+        if (!emailTest) {
+            console.warn('⚠️ Email service not configured properly');
+        } else {
+            console.log('✅ Email service ready');
         }
         
         console.log('Setting up event listeners...');
