@@ -7,7 +7,7 @@ function CreateSubscriptionModal({ isOpen, onClose }) {
   const [contractAddress, setContractAddress] = useState('');
   const [selectedEvents, setSelectedEvents] = useState([]);
   const [email, setEmail] = useState('');
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [isWalletConnected, setIsWalletConnected] = useState(true); // Always connected for now
   const [availableEvents, setAvailableEvents] = useState([]);
   const [shouldFetch, setShouldFetch] = useState(false);
   const [contractInfo, setContractInfo] = useState(null);
@@ -41,7 +41,7 @@ function CreateSubscriptionModal({ isOpen, onClose }) {
   };
 
   const handleFetchEvents = () => {
-    if (!contractAddress || !isWalletConnected) return;
+    if (!contractAddress) return;
     
     // Validate contract address
     if (!validateContractAddress(contractAddress)) {
@@ -169,7 +169,7 @@ function CreateSubscriptionModal({ isOpen, onClose }) {
         
         <button
           onClick={handleFetchEvents}
-          disabled={!contractAddress || !isWalletConnected || isLoading}
+          disabled={!contractAddress || isLoading}
           className="px-6 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Fetching Events...' : 'Fetch Events'}
@@ -354,7 +354,7 @@ function CreateSubscriptionModal({ isOpen, onClose }) {
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && (!contractAddress || !isWalletConnected || availableEvents.length === 0)) ||
+                  (currentStep === 1 && (!contractAddress || availableEvents.length === 0)) ||
                   (currentStep === 2 && (selectedEvents.length === 0 || !email))
                 }
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
