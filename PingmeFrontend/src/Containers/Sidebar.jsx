@@ -34,7 +34,7 @@ function Sidebar() {
     },
     {
       label: "My Contracts",
-      path: "/contracts",
+      path: "/my-contracts",
       active: false,
       icon: (
         <svg
